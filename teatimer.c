@@ -6,29 +6,43 @@
 #include <time.h>
 #include <unistd.h>
 
-int main(int argc, char *argv[]) {
-  char *endptr;
-  errno = 0;
-  int minutes = strtol(argv[1], &endptr, 10);
+void notify(char *notification_text) {
+  NotifyNotification *TeaNotification;
+  notify_init("Teatimer");
+  TeaNotification = notify_notification_new("tea", notification_text, NULL);
+  notify_notification_show(TeaNotification, NULL);
+  g_object_unref(G_OBJECT(TeaNotification));
+  notify_uninit();
 
-  if (endptr == argv[1]) {
-    // perror("strtol error");	# FIX: returns "Success" on error (errno 0?)
-    printf("strtol error");
+  // // TODO: implement better playback
+  system("aplay -q ~/Audio/alert.wav");
+}
+
+int main(int argc, char *argv[]) {
+
+  if (argc < 2) {
+    notify("Usage: tea MINUTES [NOTIFICATION]\n");
     exit(EXIT_FAILURE);
   }
 
+  char *endptr;
+  errno = 0;
+  int minutes = strtol(argv[1], &endptr, 10);
   int seconds = minutes * 60;
 
+  if (errno) {
+    notify("strtol conversion error");
+    perror("strtol");
+    exit(EXIT_FAILURE);
+  }
+
+  if (*endptr) {
+    notify("Error: No or wrong runtime given");
+    exit(EXIT_FAILURE);
+  }
+
   sleep(seconds);
+  notify(argv[2]);
 
-  NotifyNotification *notif;
-  notify_init("teatimer");
-  notif = notify_notification_new("tea", argv[2], NULL);
-  notify_notification_show(notif, NULL);
-  g_object_unref(G_OBJECT(notif));
-  notify_uninit();
-
-  // TODO: implement better playback
-  system("aplay -q ~/Audio/alert.wav");
   return 0;
 }
